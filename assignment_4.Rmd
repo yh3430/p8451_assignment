@@ -1,0 +1,31 @@
+---
+title: "assignment_4"
+author: "Yu He"
+date: "2023-02-07"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(stats)
+```
+
+# Part 1 Implementing a Simple Prediction Pipeline
+```{r}
+# import the data and some data cleaning
+hw4 = read_csv("class4_p1.csv") %>% 
+  janitor::clean_names()
+
+
+```
+
+
+
+
+
+
+
+
+
+
