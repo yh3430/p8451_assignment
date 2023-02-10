@@ -9,20 +9,94 @@ output: html_document
 library(tidyverse)
 library(caret)
 library(stats)
+library(modelr)
+library(mgcv)
 ```
 
 # Part 1 Implementing a Simple Prediction Pipeline
 ```{r}
 # import the data and some data cleaning
 hw4 = read_csv("class4_p1.csv") %>% 
-  janitor::clean_names()
+  janitor::clean_names() %>% 
+  mutate(
+    across(c("chronic1", "chronic3", "chronic4",
+             "tobacco1", "alcohol1", "habits5", "habits7", "agegroup", 
+             "dem3", "dem4", "dem8", "povertygroup"), as.factor)
+  ) %>% 
+  na.omit() %>% 
+  distinct(x1, .keep_all=TRUE) %>% 
+  select(-x1)
 
+#Finding correlated predictors
+hw4_numeric<- hw4 %>% 
+  dplyr::select(where(is.numeric))
 
+hw4_correlations<-cor(hw4_numeric, use="complete.obs")
+high_correlations_4<-findCorrelation(hw4_correlations, cutoff=0.4)
+# None of the variable is highly correlated wih others
+
+#Centering and Scaling
+colMeans(hw4_numeric, na.rm=TRUE)
+apply(hw4_numeric, 2, sd, na.rm=TRUE)
+
+#Scaling is needed
+set_up_preprocess<-preProcess(hw4_numeric, method=c("center", "scale"))
+
+#Output pre-processed values
+transformed_vals<-predict(set_up_preprocess, hw4_numeric)
+
+#Creating balanced partitions in the data
+train_index<-createDataPartition(hw4$healthydays, p=0.7, list=FALSE)
+
+hw4_train<-hw4[train_index,]
+hw4_test<-hw4[-train_index,]
+
+#Construct k-folds in your data
+train_folds<-createFolds(hw4$healthydays, k=10, list=FALSE)
+```
+
+# Model 1 fit and training
+```{r}
+#Perform sampling to balance data
+control_settings<-trainControl(method="repeatedcv", number=10, repeats=10)
+
+modelLookup("lm")
+
+set.seed(123)
+
+lm_model_1 <- train(
+ healthydays ~., data = hw4_train, method = "lm", preProc=c("center", "scale"), trControl = control_settings)
+
+summary(lm_model_1)
+
+lm_model_2 <- train(
+ healthydays ~ chronic1 + chronic3 + chronic4 + bmi + tobacco1 + alcohol1 + gpaq8totmin + gpaq11days, data = hw4_train, method = "lm", preProc=c("center", "scale"), trControl = control_settings)
+
+summary(lm_model_2)
 ```
 
 
+# Model evaluation
+```{r}
+# Make predictions on the test data using both models
+predictions_1 <- predict(lm_model_1, newdata = hw4_test)
+predictions_2 <- predict(lm_model_2, newdata = hw4_test)
+
+# Evaluate the performance of both models using mean squared error (MSE)
+mse_1 <- postResample(predictions_1, hw4_test$healthydays)
+mse_2 <- postResample(predictions_2, hw4_test$healthydays)
+
+mse_1
+mse_2
+
+# Based on the above RMSE value (RMSE from model 1 < RMSE from model 2), we think the linear model 1 is the preferred model
+```
 
 
+# Part 2 Conducting an Unsupervised Analysis
+```{r}
+
+```
 
 
 

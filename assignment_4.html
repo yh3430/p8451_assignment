@@ -13,7 +13,7 @@
 
 <meta name="date" content="2023-02-07" />
 
-<title>assignment_2</title>
+<title>assignment_4</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -350,7 +350,7 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">assignment_2</h1>
+<h1 class="title toc-ignore">assignment_4</h1>
 <h4 class="author">Yu He</h4>
 <h4 class="date">2023-02-07</h4>
 
@@ -366,10 +366,39 @@ display: none;
 ## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
 ## ✖ dplyr::filter() masks stats::filter()
 ## ✖ dplyr::lag()    masks stats::lag()</code></pre>
-<div id="part-1" class="section level1">
-<h1>Part 1</h1>
-<pre class="r"><code>hw4 = read_csv(&quot;class4_p1.csv&quot;) %&gt;% 
-  janitor::clean_names()</code></pre>
+<pre class="r"><code>library(caret)</code></pre>
+<pre><code>## Loading required package: lattice
+## 
+## Attaching package: &#39;caret&#39;
+## 
+## The following object is masked from &#39;package:purrr&#39;:
+## 
+##     lift</code></pre>
+<pre class="r"><code>library(stats)
+library(modelr)
+library(mgcv)</code></pre>
+<pre><code>## Loading required package: nlme
+## 
+## Attaching package: &#39;nlme&#39;
+## 
+## The following object is masked from &#39;package:dplyr&#39;:
+## 
+##     collapse
+## 
+## This is mgcv 1.8-41. For overview type &#39;help(&quot;mgcv-package&quot;)&#39;.</code></pre>
+<div id="part-1-implementing-a-simple-prediction-pipeline" class="section level1">
+<h1>Part 1 Implementing a Simple Prediction Pipeline</h1>
+<pre class="r"><code># import the data and some data cleaning
+hw4 = read_csv(&quot;class4_p1.csv&quot;) %&gt;% 
+  janitor::clean_names() %&gt;% 
+  mutate(
+    across(c(&quot;chronic1&quot;, &quot;chronic3&quot;, &quot;chronic4&quot;,
+             &quot;tobacco1&quot;, &quot;alcohol1&quot;, &quot;habits5&quot;, &quot;habits7&quot;, &quot;agegroup&quot;, 
+             &quot;dem3&quot;, &quot;dem4&quot;, &quot;dem8&quot;, &quot;povertygroup&quot;), as.factor)
+  ) %&gt;% 
+  na.omit() %&gt;% 
+  distinct(x1, .keep_all=TRUE) %&gt;% 
+  select(-x1)</code></pre>
 <pre><code>## New names:
 ## Rows: 3811 Columns: 17
 ## ── Column specification
@@ -378,39 +407,147 @@ display: none;
 ## ℹ Use `spec()` to retrieve the full column specification for this data. ℹ
 ## Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ## • `` -&gt; `...1`</code></pre>
-<pre class="r"><code>summary(hw4)</code></pre>
-<pre><code>##        x1            chronic1       chronic3        chronic4    
-##  Min.   :   1.0   Min.   :1.00   Min.   :1.000   Min.   :1.000  
-##  1st Qu.: 953.5   1st Qu.:1.00   1st Qu.:2.000   1st Qu.:2.000  
-##  Median :1906.0   Median :2.00   Median :2.000   Median :2.000  
-##  Mean   :1906.0   Mean   :1.71   Mean   :1.888   Mean   :1.938  
-##  3rd Qu.:2858.5   3rd Qu.:2.00   3rd Qu.:2.000   3rd Qu.:2.000  
-##  Max.   :3811.0   Max.   :2.00   Max.   :2.000   Max.   :2.000  
-##                   NA&#39;s   :28     NA&#39;s   :17      NA&#39;s   :8      
-##       bmi           tobacco1        alcohol1      gpaq8totmin    
-##  Min.   : 9.09   Min.   :1.000   Min.   :1.000   Min.   :  0.00  
-##  1st Qu.:23.05   1st Qu.:3.000   1st Qu.:2.000   1st Qu.:  0.00  
-##  Median :26.47   Median :3.000   Median :3.000   Median :  0.00  
-##  Mean   :27.32   Mean   :2.736   Mean   :2.642   Mean   : 43.77  
-##  3rd Qu.:30.23   3rd Qu.:3.000   3rd Qu.:3.000   3rd Qu.: 60.00  
-##  Max.   :99.83   Max.   :3.000   Max.   :3.000   Max.   :960.00  
-##  NA&#39;s   :73      NA&#39;s   :3       NA&#39;s   :17      NA&#39;s   :5       
-##    gpaq11days       habits5         habits7         agegroup    
-##  Min.   :0.000   Min.   :1.000   Min.   :1.000   Min.   :1.000  
-##  1st Qu.:2.000   1st Qu.:1.000   1st Qu.:2.000   1st Qu.:2.000  
-##  Median :5.000   Median :2.000   Median :3.000   Median :3.000  
-##  Mean   :4.273   Mean   :1.972   Mean   :2.734   Mean   :2.781  
-##  3rd Qu.:7.000   3rd Qu.:2.000   3rd Qu.:3.000   3rd Qu.:3.000  
-##  Max.   :7.000   Max.   :4.000   Max.   :5.000   Max.   :4.000  
-##  NA&#39;s   :5       NA&#39;s   :17      NA&#39;s   :1335    NA&#39;s   :8      
-##       dem3            dem4            dem8        povertygroup  healthydays   
-##  Min.   :1.000   Min.   :1.000   Min.   :1.000   Min.   :1.0   Min.   : 0.00  
-##  1st Qu.:1.000   1st Qu.:2.000   1st Qu.:1.000   1st Qu.:2.0   1st Qu.:27.00  
-##  Median :2.000   Median :2.000   Median :1.000   Median :3.0   Median :30.00  
-##  Mean   :1.594   Mean   :1.777   Mean   :1.386   Mean   :3.3   Mean   :26.34  
-##  3rd Qu.:2.000   3rd Qu.:2.000   3rd Qu.:2.000   3rd Qu.:5.0   3rd Qu.:30.00  
-##  Max.   :2.000   Max.   :2.000   Max.   :2.000   Max.   :6.0   Max.   :30.00  
-##                  NA&#39;s   :30      NA&#39;s   :6       NA&#39;s   :244   NA&#39;s   :88</code></pre>
+<pre class="r"><code>#Finding correlated predictors
+hw4_numeric&lt;- hw4 %&gt;% 
+  dplyr::select(where(is.numeric))
+
+hw4_correlations&lt;-cor(hw4_numeric, use=&quot;complete.obs&quot;)
+high_correlations_4&lt;-findCorrelation(hw4_correlations, cutoff=0.4)
+# None of the variable is highly correlated wih others
+
+#Centering and Scaling
+colMeans(hw4_numeric, na.rm=TRUE)</code></pre>
+<pre><code>##         bmi gpaq8totmin  gpaq11days healthydays 
+##   27.423170   44.909795    4.241458   26.421412</code></pre>
+<pre class="r"><code>apply(hw4_numeric, 2, sd, na.rm=TRUE)</code></pre>
+<pre><code>##         bmi gpaq8totmin  gpaq11days healthydays 
+##    6.451492   91.488412    2.652464    7.719005</code></pre>
+<pre class="r"><code>#Scaling is needed
+set_up_preprocess&lt;-preProcess(hw4_numeric, method=c(&quot;center&quot;, &quot;scale&quot;))
+
+#Output pre-processed values
+transformed_vals&lt;-predict(set_up_preprocess, hw4_numeric)
+
+#Creating balanced partitions in the data
+train_index&lt;-createDataPartition(hw4$healthydays, p=0.7, list=FALSE)
+
+hw4_train&lt;-hw4[train_index,]
+hw4_test&lt;-hw4[-train_index,]
+
+#Construct k-folds in your data
+train_folds&lt;-createFolds(hw4$healthydays, k=10, list=FALSE)</code></pre>
+</div>
+<div id="model-1-fit-and-training" class="section level1">
+<h1>Model 1 fit and training</h1>
+<pre class="r"><code>#Perform sampling to balance data
+control_settings&lt;-trainControl(method=&quot;repeatedcv&quot;, number=10, repeats=10)
+
+modelLookup(&quot;lm&quot;)</code></pre>
+<pre><code>##   model parameter     label forReg forClass probModel
+## 1    lm intercept intercept   TRUE    FALSE     FALSE</code></pre>
+<pre class="r"><code>set.seed(123)
+
+lm_model_1 &lt;- train(
+ healthydays ~., data = hw4_train, method = &quot;lm&quot;, preProc=c(&quot;center&quot;, &quot;scale&quot;), trControl = control_settings)
+
+summary(lm_model_1)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = .outcome ~ ., data = dat)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -30.8251  -0.4422   1.6062   3.5946  14.4706 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   26.43656    0.18291 144.533  &lt; 2e-16 ***
+## chronic12      0.88240    0.21675   4.071 4.92e-05 ***
+## chronic32      0.11623    0.19993   0.581 0.561077    
+## chronic42      0.88084    0.18797   4.686 3.04e-06 ***
+## bmi            0.36484    0.19942   1.829 0.067525 .  
+## tobacco12     -0.44778    0.21555  -2.077 0.037933 *  
+## tobacco13     -0.08889    0.22320  -0.398 0.690509    
+## alcohol12      0.20519    0.53733   0.382 0.702614    
+## alcohol13      0.13643    0.54251   0.251 0.801484    
+## gpaq8totmin   -0.16509    0.18765  -0.880 0.379133    
+## gpaq11days     0.37981    0.19003   1.999 0.045822 *  
+## habits52      -0.06909    0.22116  -0.312 0.754788    
+## habits53      -0.63751    0.22368  -2.850 0.004429 ** 
+## habits54      -0.69394    0.20794  -3.337 0.000867 ***
+## habits72      -0.14546    0.28034  -0.519 0.603930    
+## habits73      -0.59876    0.29461  -2.032 0.042290 *  
+## habits74      -1.06928    0.27905  -3.832 0.000132 ***
+## habits75      -0.98045    0.22066  -4.443 9.50e-06 ***
+## agegroup2     -0.78641    0.35036  -2.245 0.024941 *  
+## agegroup3     -1.52525    0.37792  -4.036 5.71e-05 ***
+## agegroup4     -1.53187    0.35346  -4.334 1.56e-05 ***
+## dem32          0.03037    0.19141   0.159 0.873961    
+## dem42          0.47268    0.20011   2.362 0.018300 *  
+## dem82          0.23910    0.19806   1.207 0.227535    
+## povertygroup2  0.16137    0.23303   0.693 0.488722    
+## povertygroup3  0.64775    0.23903   2.710 0.006807 ** 
+## povertygroup4  0.76802    0.24102   3.187 0.001469 ** 
+## povertygroup5  0.73630    0.27024   2.725 0.006512 ** 
+## povertygroup6 -0.04250    0.21716  -0.196 0.844877    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 7.171 on 1508 degrees of freedom
+## Multiple R-squared:  0.1472, Adjusted R-squared:  0.1314 
+## F-statistic:   9.3 on 28 and 1508 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>lm_model_2 &lt;- train(
+ healthydays ~ chronic1 + chronic3 + chronic4 + bmi + tobacco1 + alcohol1 + gpaq8totmin + gpaq11days, data = hw4_train, method = &quot;lm&quot;, preProc=c(&quot;center&quot;, &quot;scale&quot;), trControl = control_settings)
+
+summary(lm_model_2)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = .outcome ~ ., data = dat)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -29.0108   0.5158   1.9561   3.3212  11.7850 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) 26.43656    0.18913 139.782  &lt; 2e-16 ***
+## chronic12    1.22401    0.20695   5.914 4.10e-09 ***
+## chronic32    0.47969    0.20203   2.374  0.01770 *  
+## chronic42    1.01436    0.19184   5.288 1.42e-07 ***
+## bmi         -0.03512    0.19773  -0.178  0.85904    
+## tobacco12   -0.28761    0.22149  -1.299  0.19430    
+## tobacco13    0.30589    0.22197   1.378  0.16838    
+## alcohol12    0.19163    0.55065   0.348  0.72788    
+## alcohol13   -0.12617    0.55169  -0.229  0.81914    
+## gpaq8totmin -0.05430    0.19031  -0.285  0.77542    
+## gpaq11days   0.60875    0.19170   3.176  0.00153 ** 
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 7.415 on 1526 degrees of freedom
+## Multiple R-squared:  0.07741,    Adjusted R-squared:  0.07136 
+## F-statistic:  12.8 on 10 and 1526 DF,  p-value: &lt; 2.2e-16</code></pre>
+</div>
+<div id="model-evaluation" class="section level1">
+<h1>Model evaluation</h1>
+<pre class="r"><code># Make predictions on the test data using both models
+predictions_1 &lt;- predict(lm_model_1, newdata = hw4_test)
+predictions_2 &lt;- predict(lm_model_2, newdata = hw4_test)
+
+# Evaluate the performance of both models using mean squared error (MSE)
+mse_1 &lt;- postResample(predictions_1, hw4_test$healthydays)
+mse_2 &lt;- postResample(predictions_2, hw4_test$healthydays)
+
+mse_1</code></pre>
+<pre><code>##      RMSE  Rsquared       MAE 
+## 7.1489796 0.1549411 4.5647445</code></pre>
+<pre class="r"><code>mse_2</code></pre>
+<pre><code>##       RMSE   Rsquared        MAE 
+## 7.41684231 0.09124552 4.70984975</code></pre>
+<pre class="r"><code># Based on the above RMSE value (RMSE from model 1 &lt; RMSE from model 2), we think the linear model 1 is the preferred model</code></pre>
+</div>
+<div id="part-2-conducting-an-unsupervised-analysis" class="section level1">
+<h1>Part 2 Conducting an Unsupervised Analysis</h1>
 </div>
 
 

@@ -68,7 +68,7 @@ library(stats)
 
 #Read in data on liver function study
 set.seed(111)
-hcvdat0 <- read.csv("C:/Users/js5406/Downloads/hcvdat0.csv")
+hcvdat0 <- read.csv("hcvdat0.csv")
 
 
 #Make outcome category a factor var
@@ -194,6 +194,9 @@ test.outcome<-predict(lasso.3, hcvdat.test)
 
 confusionMatrix(test.outcome, hcvdat.test$outcome, positive="LiverDisease")
 ```
+
+
+
 
 ```{r}
 
