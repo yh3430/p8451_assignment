@@ -11,9 +11,14 @@ library(caret)
 library(stats)
 library(modelr)
 library(mgcv)
+library(factoextra)
+library(cluster)
+library(fpc)
+
 ```
 
 # Part 1 Implementing a Simple Prediction Pipeline
+Step 1, prepare and cleaning the data
 ```{r}
 # import the data and some data cleaning
 hw4 = read_csv("class4_p1.csv") %>% 
@@ -55,7 +60,7 @@ hw4_test<-hw4[-train_index,]
 train_folds<-createFolds(hw4$healthydays, k=10, list=FALSE)
 ```
 
-# Model 1 fit and training
+Step 2, Model fit and training
 ```{r}
 #Perform sampling to balance data
 control_settings<-trainControl(method="repeatedcv", number=10, repeats=10)
@@ -76,7 +81,7 @@ summary(lm_model_2)
 ```
 
 
-# Model evaluation
+Step 3, Model evaluation
 ```{r}
 # Make predictions on the test data using both models
 predictions_1 <- predict(lm_model_1, newdata = hw4_test)
@@ -90,14 +95,71 @@ mse_1
 mse_2
 
 # Based on the above RMSE value (RMSE from model 1 < RMSE from model 2), we think the linear model 1 is the preferred model
+# 
 ```
 
 
 # Part 2 Conducting an Unsupervised Analysis
+Step 1 prepare the data
 ```{r}
+# prepare and clean the data
+usarrests = 
+  USArrests %>% 
+  na.omit()
+  
+#Check means and SDs to determine if scaling is necessary
+colMeans(usarrests, na.rm=TRUE)
+apply(usarrests, 2, sd, na.rm=TRUE)
 
+# scale the dataset
+usarrests_scaled <- scale(usarrests)
 ```
 
+Step 2, Conduct a clustering analysis using k-means clustering
+```{r}
+set.seed(123)
+
+# Create Dissimilarity matrix
+diss_matrix <- dist(usarrests_scaled, method = "euclidean")
+
+# Hierarchical clustering using Complete Linkage
+clusters_hw4 <- hclust(diss_matrix, method = "complete" )
+
+# Plot the obtained dendrogram
+plot(clusters_hw4, cex = 0.6, hang = -1)
+
+# create function to use within clusGap
+hclusCut <- function(x, k) list(cluster = cutree(hclust(dist(x, method="euclidian"), method="average"), k=k))
+
+gap_stat <- clusGap(usarrests_scaled, FUN = hclusCut, K.max = 15, B = 50)
+fviz_gap_stat(gap_stat)
+
+# Use number of clusters (optimal number of cluster is 2) from gap statistic to obtain cluster assignment for each observation
+clusters.h.7<-cutree(clusters_hw4, k=2)
+table(clusters.h.7)
+
+
+# Alternative method check using k-mean method
+
+clusters<-kmeans(usarrests_scaled, 5, nstart=25)
+str(clusters)
+fviz_cluster(clusters, data=usarrests_scaled)
+#Show the mean value of features within each cluster
+clusters$centers
+
+#Conduct a gap_statistic analysis to determine optimal number of clusters
+set.seed(100)
+gap_stat<-clusGap(usarrests_scaled, FUN=kmeans, nstart=20, K.max=9, B=10)
+print(gap_stat, method="firstmax")
+
+# based on gap statistic, the optimal number of cluster is 4
+clusters.7<-kmeans(usarrests_scaled, 4, nstart=20)
+
+str(clusters.7)
+
+fviz_cluster(clusters.7, data=usarrests_scaled)
+
+```
 
 
 
