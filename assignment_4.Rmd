@@ -100,6 +100,7 @@ mse_2
 
 
 # Part 2 Conducting an Unsupervised Analysis
+Question 4
 Step 1 prepare the data
 ```{r}
 # prepare and clean the data
@@ -115,7 +116,7 @@ apply(usarrests, 2, sd, na.rm=TRUE)
 usarrests_scaled <- scale(usarrests)
 ```
 
-Step 2, Conduct a clustering analysis using k-means clustering
+Step 2, Conduct a clustering analysis using hierarchcal analysis
 ```{r}
 set.seed(123)
 
@@ -144,6 +145,7 @@ table(clusters.h.7)
 clusters<-kmeans(usarrests_scaled, 5, nstart=25)
 str(clusters)
 fviz_cluster(clusters, data=usarrests_scaled)
+
 #Show the mean value of features within each cluster
 clusters$centers
 
@@ -160,6 +162,14 @@ str(clusters.7)
 fviz_cluster(clusters.7, data=usarrests_scaled)
 
 ```
+
+# Question 5
+```{r}
+# For example, the researchers can use the newly identified clusters as an exposure and compare the socio-economic characteristics (such as median household income, education level, etc.) between the states in each cluster to see if there is a difference.
+
+# One ethical consideration can be bias: The results should be evaluated for potential bias, such as selection bias or measurement bias, and appropriate steps should be taken to minimize or control for these biases. The bias can originated from the the data collection process or collection method of USArrests data. When we train our algorithm, we should be careful of the outliers.
+```
+
 
 
 
