@@ -9,7 +9,6 @@ output: html_document
 library(tidyverse)
 library(caret)
 library(stats)
-library(modelr)
 library(mgcv)
 library(factoextra)
 library(cluster)
@@ -18,6 +17,7 @@ library(fpc)
 ```
 
 # Part 1 Implementing a Simple Prediction Pipeline
+# Question 1 & 2
 Step 1, prepare and cleaning the data
 ```{r}
 # import the data and some data cleaning
@@ -95,12 +95,12 @@ mse_1
 mse_2
 
 # Based on the above RMSE value (RMSE from model 1 < RMSE from model 2), we think the linear model 1 is the preferred model
-# 
+# The implementation of the linear regression model can be used by agencies like department of health and insurance companies. Based on the predicted days with good physical health by multiple factors, agencies can provide health promotion guidelines and interventions to promote population health. Insurance companies can adjust their policies based on the model.
 ```
 
 
 # Part 2 Conducting an Unsupervised Analysis
-Question 4
+# Question 3 & 4
 Step 1 prepare the data
 ```{r}
 # prepare and clean the data
@@ -161,6 +161,13 @@ str(clusters.7)
 
 fviz_cluster(clusters.7, data=usarrests_scaled)
 
+cluster_df = as.data.frame(cbind(usarrests, Cluster = as.factor(clusters.7$cluster)))
+
+cluster_composition = 
+cluster_df %>% 
+  group_by(Cluster) %>% 
+  summarise_all(funs(mean))
+cluster_composition
 ```
 
 # Question 5
