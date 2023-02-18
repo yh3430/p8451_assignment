@@ -1,0 +1,166 @@
+---
+title: "assignment_5"
+author: "Yu He"
+date: "2023-02-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### load libraries
+```{r}
+library(tidyverse) 
+library(caret)
+library(glmnet)
+# load the library(klaR) after the data cleaning, otherwise the select() function is not working. We need to restart the Rstudio.
+# library(klaR)
+```
+
+## Question 1
+# Step 1, data import, cleaning, and processing
+```{r}
+hw5_df = read_csv("alcohol_use.csv") %>% 
+  janitor::clean_names() %>% 
+  na.omit() %>% 
+  distinct(x1, .keep_all=TRUE) %>% 
+  select(-x1)
+
+set.seed(123)
+hw5_df$alc_consumption = as.factor(hw5_df$alc_consumption)
+
+# create data partition
+train_indices = createDataPartition(y = hw5_df$alc_consumption,p = 0.7,list = FALSE)
+train_data <- hw5_df[train_indices, ]
+test_data <- hw5_df[-train_indices, ]
+
+#Construct k-folds in your data
+trcontrol = trainControl(method = "CV", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+```
+
+# Step 2, model fit and evaluation
+Model 1 fit and evaluation
+```{r}
+# model 1, chooses alpha and lambda via cross-validation using all of the features - Elastic Net method
+
+# model 1 fit
+fit_model_1 <- train(
+  alc_consumption ~., data = train_data, method = "glmnet",
+  trControl = trcontrol, preProc=c("center", "scale"),
+ tuneLength=10, metric = "Accuracy"
+  )
+
+#Print the values of alpha and lambda that gave best prediction
+fit_model_1$bestTune
+
+#Print all of the options examined
+fit_model_1$results
+
+# Model coefficients
+coef(fit_model_1$finalModel, fit_model_1$bestTune$lambda)
+
+#fit the new alpha and lambda
+lambda_grid <- expand.grid(alpha = fit_model_1$bestTune$alpha, lambda = fit_model_1$bestTune$lambda)
+
+fit_model_1_2 <- train(
+  alc_consumption ~., data = train_data, method = "glmnet", trControl = trcontrol, preProc = c("center", "scale"),
+ tuneLength=10, tuneGrid = lambda_grid, metric = "Accuracy")
+
+# Make predictions in test set
+
+model_1_pred <- fit_model_1_2 %>% predict(test_data)
+
+# Model prediction performance
+
+test_outcome <- predict(fit_model_1_2, test_data)
+
+model_eval_1 = confusionMatrix(test_outcome, test_data$alc_consumption, positive="CurrentUse")
+model_eval_1
+```
+
+Model 2 fit and evaluation
+```{r}
+# model 2, A model that uses all the features and traditional logistic regression
+
+# model 2 fit
+fit_model_2 <- train(
+  alc_consumption ~., data = train_data, method = "glm", trControl = trcontrol
+  )
+
+finalFit2 <- glm(alc_consumption ~., data = train_data, family = "binomial")
+
+summary(fit_model_2)
+summary(finalFit2)
+
+# Model prediction performance
+
+test_outcome_2 <- predict(fit_model_2, test_data)
+
+model_eval_2 = confusionMatrix(test_outcome_2, test_data$alc_consumption, positive = "CurrentUse")
+model_eval_2
+```
+
+Model 3 fit and evaluation
+```{r}
+# model 2, A lasso model using all of the features
+# model 2 fit
+lambda<-10^seq(-3,3, length=100)
+
+fit_model_3 = train(alc_consumption ~., data = train_data, method = "glmnet", trControl = trcontrol, family = "binomial", tuneGrid = expand.grid(alpha = 1, lambda = lambda))
+
+summary(fit_model_3)
+
+# Model prediction performance
+
+test_outcome_3 <- predict(fit_model_3, test_data)
+
+model_eval_3 = confusionMatrix(test_outcome_3, test_data$alc_consumption, positive = "CurrentUse")
+model_eval_3
+```
+
+## Question 2 tune and compare three model within training set
+```{r}
+# Model 1
+train_outcome <- predict(fit_model_1_2, train_data)
+
+model_train_eval_1 = confusionMatrix(train_outcome, train_data$alc_consumption, positive="CurrentUse")
+
+# Model 2
+train_outcome_2 <- predict(fit_model_2, train_data)
+
+model_train_eval_2 = confusionMatrix(train_outcome_2, train_data$alc_consumption, positive="CurrentUse")
+
+# Model 3
+train_outcome_3 <- predict(fit_model_3, train_data)
+
+model_train_eval_3 = confusionMatrix(train_outcome_3, train_data$alc_consumption, positive="CurrentUse")
+
+model_train_eval_1
+model_train_eval_2
+model_train_eval_3
+
+compare_resamp <- resamples(list(
+  Elastic_Net_cv = fit_model_1_2,
+  Logistic_Regression_cv = fit_model_2,
+  Lasso_cv = fit_model_3
+))
+
+summary(compare_resamp)
+# dotplot(compare_resamp)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

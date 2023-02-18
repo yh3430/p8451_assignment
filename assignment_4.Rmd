@@ -132,13 +132,30 @@ plot(clusters_hw4, cex = 0.6, hang = -1)
 # create function to use within clusGap
 hclusCut <- function(x, k) list(cluster = cutree(hclust(dist(x, method="euclidian"), method="average"), k=k))
 
-gap_stat <- clusGap(usarrests_scaled, FUN = hclusCut, K.max = 15, B = 50)
+gap_stat <- clusGap(usarrests_scaled, FUN = hcut, nstart = 25, K.max = 10, B = 50)
 fviz_gap_stat(gap_stat)
 
-# Use number of clusters (optimal number of cluster is 2) from gap statistic to obtain cluster assignment for each observation
-clusters.h.7<-cutree(clusters_hw4, k=2)
+# Use number of clusters (optimal number of cluster is 3) from gap statistic to obtain cluster assignment for each observation
+clusters.h.7<-cutree(clusters_hw4, k=3)
 table(clusters.h.7)
 
+#Alternatives for hierarchical clustering
+
+clusters.hcut_4<-hcut(usarrests_scaled, k=5, hc_func="hclust", hc_method="single", hc_metric="euclidian")
+
+clusters.hcut_4$size
+fviz_dend(clusters.hcut_4, rect=TRUE)
+fviz_cluster(clusters.hcut_4)
+
+gap_stat_alt <- clusGap(usarrests_scaled, FUN = hcut, hc_method="single", K.max = 10, B = 5)
+fviz_gap_stat(gap_stat_alt)
+
+input.feature.vals_4<-cbind(usarrests_scaled,cluster=as.factor(clusters.hcut_4$cluster))
+input.feature.vals_4 = data.frame(input.feature.vals_4)
+
+input.feature.vals_4 %>%
+  group_by(cluster) %>%
+  summarise_all(mean)
 
 # Alternative method check using k-mean method
 
