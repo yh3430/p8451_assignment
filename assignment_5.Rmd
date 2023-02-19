@@ -35,7 +35,7 @@ train_indices = createDataPartition(y = hw5_df$alc_consumption,p = 0.7,list = FA
 train_data <- hw5_df[train_indices, ]
 test_data <- hw5_df[-train_indices, ]
 
-#Construct k-folds in your data
+# Construct k-folds in your data
 trcontrol = trainControl(method = "CV", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
 ```
 
@@ -51,16 +51,16 @@ fit_model_1 <- train(
  tuneLength=10, metric = "Accuracy"
   )
 
-#Print the values of alpha and lambda that gave best prediction
+# Print the values of alpha and lambda that gave best prediction
 fit_model_1$bestTune
 
-#Print all of the options examined
+# Print all of the options examined
 fit_model_1$results
 
 # Model coefficients
 coef(fit_model_1$finalModel, fit_model_1$bestTune$lambda)
 
-#fit the new alpha and lambda
+# fit the new alpha and lambda
 lambda_grid <- expand.grid(alpha = fit_model_1$bestTune$alpha, lambda = fit_model_1$bestTune$lambda)
 
 fit_model_1_2 <- train(
@@ -129,12 +129,12 @@ model_train_eval_1 = confusionMatrix(train_outcome, train_data$alc_consumption, 
 # Model 2
 train_outcome_2 <- predict(fit_model_2, train_data)
 
-model_train_eval_2 = confusionMatrix(train_outcome_2, train_data$alc_consumption, positive="CurrentUse")
+model_train_eval_2 = confusionMatrix(train_outcome_2, train_data$alc_consumption, positive = "CurrentUse")
 
 # Model 3
 train_outcome_3 <- predict(fit_model_3, train_data)
 
-model_train_eval_3 = confusionMatrix(train_outcome_3, train_data$alc_consumption, positive="CurrentUse")
+model_train_eval_3 = confusionMatrix(train_outcome_3, train_data$alc_consumption, positive = "CurrentUse")
 
 model_train_eval_1
 model_train_eval_2
@@ -147,10 +147,24 @@ compare_resamp <- resamples(list(
 ))
 
 summary(compare_resamp)
-# dotplot(compare_resamp)
+dotplot(compare_resamp)
+
+# All the evaluation parameters should that all the above three model performed roughly the same. Based on Accuracy, the logistic regression model
+# slightly better with a narrower 95% CI. So the final choice of model is the traditional logistic regression with all the features.
 ```
 
+## Question 3 evaluation the chosen final model within test dataset
+```{r}
+# Model 2, the final model - traditional logistic model use all features
+test_outcome_2 <- predict(fit_model_2, test_data)
 
+model_eval_2 = confusionMatrix(test_outcome_2, test_data$alc_consumption, positive="CurrentUse")
+
+model_eval_2
+
+# All the evaluation parameters should that all the above three model performed roughly the same. Based on Accuracy, the logistic regression model
+# slightly better.
+```
 
 
 
