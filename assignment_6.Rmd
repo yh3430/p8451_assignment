@@ -1,0 +1,69 @@
+---
+title: "assignment_6"
+author: "Yu He"
+date: "2023-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(NHANES)
+library(tidyverse)
+library(rpart)
+library(caret)
+library(rpart.plot)
+library(pROC)
+```
+
+## Dataset process and partition
+```{r}
+hw6_df = NHANES %>% 
+  janitor::clean_names() %>% 
+  select("age", "race1", "education", "hh_income", "weight", "height", "pulse", "diabetes", "bmi", "phys_active", "smoke100") %>% 
+  na.omit()
+
+summary(hw6_df)
+# Unbalanced data obersved
+
+# Partition data into training and testing sets.
+set.seed(123)
+ 
+training_data <- hw6_df$diabetes %>% createDataPartition(p = 0.7, list = F)
+train_data <- hw6_df[training_data, ]
+test_data <- hw6_df[-training_data, ]
+```
+
+## Model fit
+# Model 1 classfication Tree model
+```{r}
+set.seed(123)
+
+#Using 10-fold cross-validation to train model
+train_control <- trainControl(method = "cv", number = 10, sampling = "down")
+
+#Create sequence of cp parameters to try 
+grid <- expand.grid(cp = seq(0.001, 0.3, by = 0.01))
+
+#Using rpart method to generate regression tree, using all variables in dataset to predict life expectancy
+model_fit_1 <- train(diabetes ~ . , data = train_data, method = "rpart", trControl = train_control, tuneGrid = grid)
+
+model_fit_1$bestTune
+model_fit_1$results
+
+#Can use rpart.plot function to visualize tree
+rpart.plot(model_fit_1$finalModel)
+```
+
+# model 2 fit support vector classifier
+```{r}
+
+```
+
+
+
+
+
+

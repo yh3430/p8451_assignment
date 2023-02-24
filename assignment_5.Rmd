@@ -21,6 +21,8 @@ library(glmnet)
 ## Question 1
 # Step 1, data import, cleaning, and processing
 ```{r}
+setwd("~/Desktop/CU Spring 2023/P8451 intro to machine learning for EPI/p8451_assignment")
+
 hw5_df = read_csv("alcohol_use.csv") %>% 
   janitor::clean_names() %>% 
   na.omit() %>% 
@@ -28,6 +30,7 @@ hw5_df = read_csv("alcohol_use.csv") %>%
   select(-x1)
 
 set.seed(123)
+
 hw5_df$alc_consumption = as.factor(hw5_df$alc_consumption)
 
 # create data partition
@@ -36,14 +39,14 @@ train_data <- hw5_df[train_indices, ]
 test_data <- hw5_df[-train_indices, ]
 
 # Construct k-folds in your data
-trcontrol = trainControl(method = "CV", number = 10, classProbs = TRUE, summaryFunction = twoClassSummary)
+trcontrol = trainControl(method = "CV", number = 10)
 ```
 
 # Step 2, model fit and evaluation
 Model 1 fit and evaluation
 ```{r}
 # model 1, chooses alpha and lambda via cross-validation using all of the features - Elastic Net method
-
+set.seed(123)
 # model 1 fit
 fit_model_1 <- train(
   alc_consumption ~., data = train_data, method = "glmnet",
@@ -69,20 +72,20 @@ fit_model_1_2 <- train(
 
 # Make predictions in test set
 
-model_1_pred <- fit_model_1_2 %>% predict(test_data)
+model_1_pred <- fit_model_1 %>% predict(test_data)
 
 # Model prediction performance
 
-test_outcome <- predict(fit_model_1_2, test_data)
+test_outcome <- predict(fit_model_1, test_data)
 
-model_eval_1 = confusionMatrix(test_outcome, test_data$alc_consumption, positive="CurrentUse")
+model_eval_1 = confusionMatrix(test_outcome, test_data$alc_consumption, positive = "CurrentUse")
 model_eval_1
 ```
 
 Model 2 fit and evaluation
 ```{r}
 # model 2, A model that uses all the features and traditional logistic regression
-
+set.seed(123)
 # model 2 fit
 fit_model_2 <- train(
   alc_consumption ~., data = train_data, method = "glm", trControl = trcontrol
@@ -103,8 +106,9 @@ model_eval_2
 
 Model 3 fit and evaluation
 ```{r}
-# model 2, A lasso model using all of the features
-# model 2 fit
+# model 3, A lasso model using all of the features
+# model 3 fit
+set.seed(123)
 lambda<-10^seq(-3,3, length=100)
 
 fit_model_3 = train(alc_consumption ~., data = train_data, method = "glmnet", trControl = trcontrol, family = "binomial", tuneGrid = expand.grid(alpha = 1, lambda = lambda))
@@ -122,9 +126,9 @@ model_eval_3
 ## Question 2 tune and compare three model within training set
 ```{r}
 # Model 1
-train_outcome <- predict(fit_model_1_2, train_data)
+train_outcome <- predict(fit_model_1, train_data)
 
-model_train_eval_1 = confusionMatrix(train_outcome, train_data$alc_consumption, positive="CurrentUse")
+model_train_eval_1 = confusionMatrix(train_outcome, train_data$alc_consumption, positive = "CurrentUse")
 
 # Model 2
 train_outcome_2 <- predict(fit_model_2, train_data)
@@ -141,7 +145,7 @@ model_train_eval_2
 model_train_eval_3
 
 compare_resamp <- resamples(list(
-  Elastic_Net_cv = fit_model_1_2,
+  Elastic_Net_cv = fit_model_1,
   Logistic_Regression_cv = fit_model_2,
   Lasso_cv = fit_model_3
 ))
@@ -149,25 +153,39 @@ compare_resamp <- resamples(list(
 summary(compare_resamp)
 dotplot(compare_resamp)
 
-# All the evaluation parameters should that all the above three model performed roughly the same. Based on Accuracy, the logistic regression model
-# slightly better with a narrower 95% CI. So the final choice of model is the traditional logistic regression with all the features.
+#test...
+postResample(train_outcome, train_data$alc_consumption)
+postResample(train_outcome_2, train_data$alc_consumption)
+postResample(train_outcome_3, train_data$alc_consumption)
+
+# All the evaluation parameters show that the performances of lassso and elasctic nets models are very close and better than the traditional logistic regression model. Based on Accuracy, the lasso  model slightly better. So the final choice of model is the lasso model with all the features.
 ```
 
 ## Question 3 evaluation the chosen final model within test dataset
 ```{r}
-# Model 2, the final model - traditional logistic model use all features
-test_outcome_2 <- predict(fit_model_2, test_data)
+# Model 2, the final model - lasso model use all features.
+test_outcome_3 <- predict(fit_model_3, test_data)
 
-model_eval_2 = confusionMatrix(test_outcome_2, test_data$alc_consumption, positive="CurrentUse")
+model_eval_3 = confusionMatrix(test_outcome_3, test_data$alc_consumption, positive = "CurrentUse")
 
-model_eval_2
+model_eval_3
 
-# All the evaluation parameters should that all the above three model performed roughly the same. Based on Accuracy, the logistic regression model
-# slightly better.
+# All the evaluation parameters should that all the above three model performed similarly. But the performances of lassso and elasctic nets models are very close and better than the traditional logistic regression model. Based on Accuracy, the lasso model slightly better.
 ```
 
+## Question 5, research question
 
+a) Direct research questions that could be addressed through this analysis could include:
 
+Can current alcohol consumption be predicted accurately using personality scores as features?
+
+How well do lasso models perform in predicting current alcohol consumption using personality scores as features?
+
+b) Indirect research questions that could be helped to address through this analysis could include: 
+
+How accurate are different machine learning algorithms in predicting alcohol consumption, and which factors are most important for improving prediction accuracy?
+
+How might the relationship between personality traits and alcohol consumption change over time, and how can these changes be accounted for in predictive models?
 
 
 
