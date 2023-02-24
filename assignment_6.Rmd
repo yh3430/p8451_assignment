@@ -16,9 +16,10 @@ library(rpart)
 library(caret)
 library(rpart.plot)
 library(pROC)
+library(e1071)
 ```
 
-## Dataset process and partition
+## Section 1, Dataset process and partition
 ```{r}
 hw6_df = NHANES %>% 
   janitor::clean_names() %>% 
@@ -36,31 +37,149 @@ train_data <- hw6_df[training_data, ]
 test_data <- hw6_df[-training_data, ]
 ```
 
-## Model fit
+## Section 2, Model fit
 # Model 1 classfication Tree model
 ```{r}
 set.seed(123)
 
 #Using 10-fold cross-validation to train model
-train_control <- trainControl(method = "cv", number = 10, sampling = "down")
+train_control_tree <- trainControl(method = "cv", number = 10, sampling = "down")
 
 #Create sequence of cp parameters to try 
-grid <- expand.grid(cp = seq(0.001, 0.3, by = 0.01))
+grid_1 <- expand.grid(cp = seq(0.001, 0.3, by = 0.01))
 
 #Using rpart method to generate regression tree, using all variables in dataset to predict life expectancy
-model_fit_1 <- train(diabetes ~ . , data = train_data, method = "rpart", trControl = train_control, tuneGrid = grid)
+model_fit_1 <- train(diabetes ~ . , data = train_data, method = "rpart", trControl = train_control_tree, tuneGrid = grid_1)
 
 model_fit_1$bestTune
 model_fit_1$results
 
 #Can use rpart.plot function to visualize tree
 rpart.plot(model_fit_1$finalModel)
+
+#Note you can obtain variable importance on the final model within training data
+varImp(model_fit_1)
 ```
 
 # model 2 fit support vector classifier
 ```{r}
+# str(hw6_df)
+# summary(hw6_df)
+# hw6_df = data.frame(lapply(hw6_df, as.numeric))
+# str(hw6_df)
+
+# Set No diabetes as Reference Level
+# hw6_df$diabetes = as.factor(hw6_df$diabetes)
+levels(hw6_df$diabetes) <- c("No", "Yes")
+hw6_df$diabetes <- relevel(hw6_df$diabetes, ref = "No")
+
+set.seed(123)
+
+# Specify training control
+train_control_svc <- trainControl(method = "cv", number = 10, classProbs = T)
+
+# Create tuning grid
+grid_2 <- expand.grid(C = seq(0.001, 2, length = 30))
+
+# Train model with cross-validation and tuning
+# Incorporate different values for cost (C)
+model_fit_2 <- train(diabetes ~ ., data = train_data, method = "svmLinear",  trControl = train_control_svc, preProcess = c("center", "scale"), 
+                     tuneGrid = grid_2)
+
+model_fit_2$bestTune
+model_fit_2$results
+#Visualize accuracy versus values of C
+plot(model_fit_2)
+
+#Obtain metrics of accuracy from training
+confusionMatrix(model_fit_2)
+
+#See information about final model
+model_fit_2$finalModel
+```
+
+# model 3 fit logistic regression
+```{r}
+set.seed(123)
+
+# Specify training control
+train_control_logistic <- trainControl(method = "cv", number = 10, classProbs = T)
+
+model_fit_3 <- train(diabetes ~ ., data = train_data, method = "glm",  trControl = train_control_logistic, family = "binomial")
+
+summary(model_fit_3)
+
+model_fit_3$results
+```
+
+## Section 3, Model evaluation and optimal model selection based on accuracy
+```{r}
+# Model 1
+train_outcome <- predict(model_fit_1, train_data)
+
+model_train_eval_1 = confusionMatrix(train_outcome, train_data$diabetes, positive = "No")
+
+# Model 2
+train_outcome_2 <- predict(model_fit_2, train_data)
+
+model_train_eval_2 = confusionMatrix(train_outcome_2, train_data$diabetes, positive = "No")
+
+# Model 3
+train_outcome_3 <- predict(model_fit_3, train_data)
+
+model_train_eval_3 = confusionMatrix(train_outcome_3, train_data$diabetes, positive = "No")
+
+model_train_eval_1
+model_train_eval_2
+model_train_eval_3
+
+compare_resamp <- resamples(list(
+  classification_tree_cv = model_fit_1,
+  svmLinear_cv = model_fit_2,
+  logistic_cv = model_fit_3
+))
+
+summary(compare_resamp)
+dotplot(compare_resamp)
+
+# create table of accuracy and kappa
+postResample(train_outcome, train_data$diabetes)
+postResample(train_outcome_2, train_data$diabetes)
+postResample(train_outcome_3, train_data$diabetes)
+
+# All the evaluation parameters show that the performances of logistic regression model and support vector machine with a linear classifier model are very close and better than the classification tree model. Based on Accuracy, the support vector machine with a linear classifier modell slightly better. So the final choice of model is the support vector machine with a linear classifier model.
+```
+
+## Section 4, evaluation the chosen final model within test dataset
+```{r}
+# Model 2, the final model - support vector machine with a linear classifier model use all features.
+test_outcome_2 <- predict(model_fit_2, test_data)
+
+model_eval_2 = confusionMatrix(test_outcome_2, test_data$diabetes, positive = "No")
+
+model_eval_2
+
+# All the evaluation parameters should that all the above three model performed similarly. But the performances of lassso and elasctic nets models are very close and better than the traditional logistic regression model. Based on Accuracy, the lasso model slightly better.
+```
+
+## model limitations/considerations of the selected model
+```{r}
+# limitation/consideration of the support vector machine with a linear classifier model
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
