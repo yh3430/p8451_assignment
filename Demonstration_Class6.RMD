@@ -222,7 +222,7 @@ library(e1071)
 
 
 ```{r data_prep_svc}
-heart.data <- read.csv("C:/Users/js5406/Downloads/processed.cleveland.data", header=FALSE)
+heart.data <- read.csv("processed.cleveland.data", header=FALSE)
 
 var.names<-c("age", "sex", "pain_type", "resting_sysbp", "chol", "fast_blsugar_gt120", "rest_ecg", "max_hr", "exerc_angina", "ST_depression", "ST_slope", "vessels_colorflu", "defect", "heart_disease_present")
 

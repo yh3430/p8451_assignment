@@ -4,7 +4,7 @@ author: "Yu He"
 date: "2023-02-21"
 output: html_document
 ---
-
+= 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -63,20 +63,13 @@ varImp(model_fit_1)
 
 # model 2 fit support vector classifier
 ```{r}
-# str(hw6_df)
-# summary(hw6_df)
-# hw6_df = data.frame(lapply(hw6_df, as.numeric))
-# str(hw6_df)
-
-# Set No diabetes as Reference Level
-# hw6_df$diabetes = as.factor(hw6_df$diabetes)
 levels(hw6_df$diabetes) <- c("No", "Yes")
 hw6_df$diabetes <- relevel(hw6_df$diabetes, ref = "No")
 
 set.seed(123)
 
 # Specify training control
-train_control_svc <- trainControl(method = "cv", number = 10, classProbs = T)
+train_control_svc <- trainControl(method = "cv", number = 10, classProbs = T, sampling = "down")
 
 # Create tuning grid
 grid_2 <- expand.grid(C = seq(0.001, 2, length = 30))
@@ -103,9 +96,9 @@ model_fit_2$finalModel
 set.seed(123)
 
 # Specify training control
-train_control_logistic <- trainControl(method = "cv", number = 10, classProbs = T)
+train_control_logistic <- trainControl(method = "cv", number = 10, classProbs = T, sampling = "down")
 
-model_fit_3 <- train(diabetes ~ ., data = train_data, method = "glm",  trControl = train_control_logistic, family = "binomial")
+model_fit_3 <- train(diabetes ~ ., data = train_data, method = "glm",  trControl = train_control_logistic, preProcess = c("center", "scale"), family = "binomial")
 
 summary(model_fit_3)
 
@@ -115,9 +108,9 @@ model_fit_3$results
 ## Section 3, Model evaluation and optimal model selection based on accuracy
 ```{r}
 # Model 1
-train_outcome <- predict(model_fit_1, train_data)
+train_outcome_1 <- predict(model_fit_1, train_data)
 
-model_train_eval_1 = confusionMatrix(train_outcome, train_data$diabetes, positive = "No")
+model_train_eval_1 = confusionMatrix(train_outcome_1, train_data$diabetes, positive = "No")
 
 # Model 2
 train_outcome_2 <- predict(model_fit_2, train_data)
@@ -147,12 +140,12 @@ postResample(train_outcome, train_data$diabetes)
 postResample(train_outcome_2, train_data$diabetes)
 postResample(train_outcome_3, train_data$diabetes)
 
-# All the evaluation parameters show that the performances of logistic regression model and support vector machine with a linear classifier model are very close and better than the classification tree model. Based on Accuracy, the support vector machine with a linear classifier modell slightly better. So the final choice of model is the support vector machine with a linear classifier model.
+# All the evaluation parameters show that the performances of classification tree model and logistic regression model are very close and worse than the support vector machine with a linear classifier model. Based on Accuracy, the lsupport vector machine with a linear classifier model is slightly better. So the final choice of model is the support vector machine with a linear classifier model.
 ```
 
 ## Section 4, evaluation the chosen final model within test dataset
 ```{r}
-# Model 2, the final model - support vector machine with a linear classifier model use all features.
+# Model 2, the final model - logistic regression model use all features.
 test_outcome_2 <- predict(model_fit_2, test_data)
 
 model_eval_2 = confusionMatrix(test_outcome_2, test_data$diabetes, positive = "No")
@@ -165,6 +158,12 @@ model_eval_2
 ## model limitations/considerations of the selected model
 ```{r}
 # limitation/consideration of the support vector machine with a linear classifier model
+
+# Limited performance on non-linearly separable data:
+# SVMs with a linear classifier model are only effective when the data is linearly separable. Linearly separable data is data that can be separated into two classes using a straight line or a hyperplane. However, in real-world datasets, it is often the case that the data is not linearly separable. In such cases, SVMs with a linear classifier may not be the best choice for classification tasks. One solution to overcome this limitation is to use non-linear kernels such as polynomial, radial basis function (RBF), or sigmoid kernels, which transform the data into a higher-dimensional space where it is more likely to be linearly separable. However, the use of non-linear kernels can lead to overfitting and increase the complexity of the model.
+
+# High sensitivity to outliers:
+# SVMs with a linear classifier model are sensitive to outliers. Outliers are data points that are far from the rest of the data points in a dataset. Outliers can significantly affect the position of the decision boundary, which can lead to poor performance of the model. This is because SVMs try to maximize the margin, which is the distance between the decision boundary and the closest data points. Outliers can significantly increase the margin, which can result in a suboptimal decision boundary. To overcome this limitation, one solution is to remove the outliers before training the model. Alternatively, SVMs with a non-linear kernel can be used, which are less sensitive to outliers.
 
 ```
 
